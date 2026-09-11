@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>JARVIS AI Assistant</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at center, #11253a 0%, #05090f 45%, #020306 100%);
+    color: #e8f7ff;
+    font-family: Arial, sans-serif;
+    overflow-x: hidden;
+}
+
+header {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 25px;
+    border-bottom: 1px solid rgba(0,220,255,.2);
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    letter-spacing: 4px;
+}
+
+.status {
+    font-size: 13px;
+    opacity: .8;
+}
+
+main {
+    max-width: 1200px;
+    margin: auto;
+    padding: 30px 20px;
+}
+
+.core-container {
+    display: flex;
+    justify-content: center;
+    margin: 30px 0;
+}
+
+.core {
+    width: 230px;
+    height: 230px;
+    border-radius: 50%;
+    border: 2px solid #00d9ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    box-shadow:
+        0 0 25px rgba(0,220,255,.5),
+        inset 0 0 40px rgba(0,220,255,.2);
+
+    animation: pulse 3s infinite;
+}
+
+.core-inner {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: rgba(0,200,255,.12);
+    border: 1px solid #00d9ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.core-text {
+    text-align: center;
+    font-size: 13px;
+    letter-spacing: 2px;
+}
+
+@keyframes pulse {
+    0%,100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.panel {
+    background: rgba(5,15,25,.75);
+    border: 1px solid rgba(0,220,255,.2);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.messages {
+    height: 280px;
+    overflow-y: auto;
+}
+
+.message {
+    margin: 10px 0;
+    padding: 12px;
+    border-radius: 10px;
+    line-height: 1.5;
+}
+
+.user {
+    background: rgba(0,150,255,.12);
+}
+
+.jarvis {
+    background: rgba(0,255,180,.08);
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+}
+
+input {
+    flex: 1;
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #16485b;
+    background: #071019;
+    color: white;
+    outline: none;
+}
+
+button {
+    padding: 14px 18px;
+    border-radius: 10px;
+    border: 1px solid #00cfff;
+    background: #06121c;
+    color: #e8f7ff;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0c2635;
+}
+
+.mic {
+    width: 60px;
+    font-size: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 15px;
+}
+
+.card {
+    padding: 20px;
+    border: 1px solid rgba(0,220,255,.18);
+    border-radius: 12px;
+    background: rgba(0,0,0,.2);
+}
+
+.card h3 {
+    margin-bottom: 8px;
+}
+
+@media(max-width:700px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .controls {
+        flex-wrap: wrap;
+    }
+
+    input {
+        min-width: 100%;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="logo">JARVIS</div>
+    <div class="status" id="status">● ONLINE</div>
+</header>
+
+<main>
+
+<div class="core-container">
+    <div class="core">
+        <div class="core-inner">
+            <div class="core-text">
+                JARVIS<br>
+                AI CORE
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel messages" id="messages">
+    <div class="message jarvis">
+        JARVIS online. How can I help?
+    </div>
+</div>
+
+<div class="panel">
+
+    <div class="controls">
+
+        <input
+            id="command"
+            placeholder="Talk to JARVIS..."
+            autocomplete="off"
+        >
+
+        <button onclick="sendCommand()">
+            SEND
+        </button>
+
+        <button class="mic" onclick="startVoice()">
+            🎙
+        </button>
+
+    </div>
+
+</div>
+
+<div class="grid">
+
+    <div class="card">
+        <h3>📅 Calendar</h3>
+        <p id="calendarStatus">Ready</p>
+    </div>
+
+    <div class="card">
+        <h3>📱 Device</h3>
+        <p id="deviceStatus">Bridge disconnected</p>
+    </div>
+
+    <div class="card">
+        <h3>🎤 Voice</h3>
+        <p id="voiceStatus">Ready</p>
+    </div>
+
+</div>
+
+</main>
+
+<script>
+
+const API_URL = "http://localhost:3000";
+
+const commandInput = document.getElementById("command");
+const messages = document.getElementById("messages");
+const statusEl = document.getElementById("status");
+
+function addMessage(text, type) {
+
+    const div = document.createElement("div");
+
+    div.className = "message " + type;
+
+    div.textContent = text;
+
+    messages.appendChild(div);
+
+    messages.scrollTop = messages.scrollHeight;
+}
+
+async function sendCommand() {
+
+    const text = commandInput.value.trim();
+
+    if (!text) return;
+
+    addMessage(text, "user");
+
+    commandInput.value = "";
+
+    statusEl.textContent = "● THINKING";
+
+    try {
+
+        const response = await fetch(`${API_URL}/api/jarvis`, {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                message: text
+            })
+
+        });
+
+        const data = await response.json();
+
+        addMessage(data.reply || "No response.", "jarvis");
+
+        speak(data.reply || "");
+
+    } catch(error) {
+
+        addMessage(
+            "Unable to connect to JARVIS server.",
+            "jarvis"
+        );
+
+        console.error(error);
+
+    } finally {
+
+        statusEl.textContent = "● ONLINE";
+    }
+}
+
+commandInput.addEventListener("keydown", e => {
+
+    if (e.key === "Enter") {
+        sendCommand();
+    }
+
+});
+
+
+/* Browser speech recognition */
+
+let recognition;
+
+function startVoice() {
+
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+
+        alert("Speech recognition is not supported by this browser.");
+
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+
+    recognition.lang = "en-IN";
+
+    recognition.interimResults = false;
+
+    recognition.continuous = false;
+
+    document.getElementById("voiceStatus")
+        .textContent = "Listening...";
+
+    recognition.start();
+
+    recognition.onresult = event => {
+
+        const text =
+            event.results[0][0].transcript;
+
+        commandInput.value = text;
+
+        sendCommand();
+    };
+
+    recognition.onerror = event => {
+
+        console.error(event.error);
+
+        document.getElementById("voiceStatus")
+            .textContent = "Voice error";
+    };
+
+    recognition.onend = () => {
+
+        document.getElementById("voiceStatus")
+            .textContent = "Ready";
+    };
+}
+
+
+/* Text-to-speech */
+
+function speak(text) {
+
+    if (!text) return;
+
+    if (!("speechSynthesis" in window)) return;
+
+    window.speechSynthesis.cancel();
+
+    const utterance =
+        new SpeechSynthesisUtterance(text);
+
+    utterance.lang = "en-IN";
+
+    utterance.rate = 1;
+
+    utterance.pitch = 1;
+
+    window.speechSynthesis.speak(utterance);
+}
+
+
+/*
+Android bridge.
+
+The Android WebView can expose:
+
+window.JARVIS_ANDROID
+
+The Android application decides which
+commands are actually allowed.
+*/
+
+function sendToAndroid(action, data = {}) {
+
+    if (
+        window.JARVIS_ANDROID &&
+        typeof window.JARVIS_ANDROID.execute === "function"
+    ) {
+
+        return window.JARVIS_ANDROID.execute(
+            JSON.stringify({
+                action,
+                ...data
+            })
+        );
+    }
+
+    console.log("Android bridge unavailable:", action, data);
+}
+
+</script>
+
+</body>
+  </html>
